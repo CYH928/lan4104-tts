@@ -100,12 +100,12 @@
       background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; }
   </style>
 </head>
-<body class="noise min-h-screen bg-surface-50 dark:bg-surface-950 flex items-start justify-center px-4 py-8 sm:py-12 transition-colors duration-500">
+<body class="noise min-h-dvh bg-surface-50 dark:bg-surface-950 flex items-start justify-center px-3 sm:px-6 lg:px-8 py-6 sm:py-12 transition-colors duration-500">
 
-  <div class="relative z-10 w-full max-w-2xl lg:max-w-3xl">
+  <div class="relative z-10 w-full max-w-2xl md:max-w-3xl lg:max-w-4xl xl:max-w-5xl">
 
     <!-- Top Bar -->
-    <nav class="flex items-center justify-between mb-8 stagger-1">
+    <nav class="flex items-center justify-between mb-5 sm:mb-8 stagger-1">
       <div class="flex items-center gap-2.5 text-accent-600 dark:text-accent-400">
         <div class="flex items-end gap-[3px] h-7">
           <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
@@ -126,19 +126,19 @@
     </nav>
 
     <!-- Header -->
-    <header class="mb-10 stagger-2">
-      <p id="subtitle" class="text-[13px] font-medium text-accent-600 dark:text-accent-400 tracking-wide uppercase mb-2">High-quality Text-to-Speech</p>
-      <h1 class="font-display text-4xl sm:text-5xl lg:text-6xl text-surface-900 dark:text-surface-50 leading-[1.1] tracking-tight">
+    <header class="mb-6 sm:mb-10 stagger-2">
+      <p id="subtitle" class="text-[12px] sm:text-[13px] font-medium text-accent-600 dark:text-accent-400 tracking-wide uppercase mb-2">High-quality Text-to-Speech</p>
+      <h1 class="font-display text-3xl sm:text-5xl lg:text-6xl text-surface-900 dark:text-surface-50 leading-[1.1] tracking-tight">
         Convert your words<br>
         <span class="text-surface-400 dark:text-surface-500">into natural speech.</span>
       </h1>
     </header>
 
     <!-- Main Card -->
-    <main class="bg-white dark:bg-surface-900 rounded-3xl shadow-2xl shadow-surface-900/[0.04] dark:shadow-black/30 border border-surface-200/80 dark:border-surface-800 p-5 sm:p-6 transition-colors duration-500 stagger-3">
+    <main class="bg-white dark:bg-surface-900 rounded-2xl sm:rounded-3xl shadow-2xl shadow-surface-900/[0.04] dark:shadow-black/30 border border-surface-200/80 dark:border-surface-800 p-4 sm:p-6 lg:p-8 transition-colors duration-500 stagger-3">
 
       <!-- Controls Row -->
-      <div class="grid grid-cols-3 gap-4 mb-6">
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
         <div>
           <label for="language" id="labelLang" class="block text-[11px] font-semibold text-surface-400 dark:text-surface-500 uppercase tracking-widest mb-2">Language</label>
           <select id="language" class="w-full px-3 py-2.5 rounded-xl border border-surface-200 dark:border-surface-700 bg-surface-50 dark:bg-surface-800 text-[13px] text-surface-800 dark:text-surface-200 font-medium focus:outline-none focus:ring-2 focus:ring-accent-500/20 focus:border-accent-500 transition-all cursor-pointer appearance-none">
@@ -156,7 +156,7 @@
           <select id="voice" class="w-full px-3 py-2.5 rounded-xl border border-surface-200 dark:border-surface-700 bg-surface-50 dark:bg-surface-800 text-[13px] text-surface-800 dark:text-surface-200 font-medium focus:outline-none focus:ring-2 focus:ring-accent-500/20 focus:border-accent-500 transition-all cursor-pointer appearance-none">
           </select>
         </div>
-        <div>
+        <div class="col-span-2 sm:col-span-1">
           <div class="flex items-center justify-between mb-2">
             <label id="labelSpeed" class="text-[11px] font-semibold text-surface-400 dark:text-surface-500 uppercase tracking-widest">Speed</label>
             <button id="rateReset" title="Reset to 1.0x" class="text-[11px] font-mono font-bold text-accent-600 dark:text-accent-400 hover:text-accent-700 dark:hover:text-accent-300 transition-colors cursor-pointer">
@@ -190,9 +190,11 @@
                  placeholder:text-surface-300 dark:placeholder:text-surface-600 focus:outline-none focus:ring-2 focus:ring-accent-500/20 focus:border-accent-500 transition-all"></textarea>
         <div class="flex justify-between items-center mt-2 px-1">
           <span id="shortcutHint" class="text-[11px] text-surface-300 dark:text-surface-700 font-medium">Ctrl+Enter to play</span>
-          <span class="text-[11px] font-mono tabular-nums">
-            <span id="charCount" class="text-surface-400">0</span><span id="charMax" class="text-surface-300 dark:text-surface-700"> / 100,000</span>
-          </span>
+          <div class="flex items-center gap-3 text-[11px] font-mono tabular-nums">
+            <span><span id="wordCount" class="text-surface-400">0</span><span id="wordLabel" class="text-surface-300 dark:text-surface-700"> words</span></span>
+            <span class="text-surface-200 dark:text-surface-700">|</span>
+            <span><span id="charCount" class="text-surface-400">0</span><span id="charMax" class="text-surface-300 dark:text-surface-700"> / 100,000</span></span>
+          </div>
         </div>
       </div>
 
@@ -245,7 +247,7 @@
     </main>
 
     <!-- Footer -->
-    <footer class="mt-10 flex items-center justify-between text-[11px] text-surface-400 dark:text-surface-600 stagger-5">
+    <footer class="mt-6 sm:mt-10 flex items-center justify-between text-[11px] text-surface-400 dark:text-surface-600 stagger-5">
       <p id="footerInfo">Powered by Edge TTS &middot; Hosted on Cloudflare</p>
       <p>Made by YKHN C.</p>
     </footer>

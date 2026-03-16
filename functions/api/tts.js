@@ -97,21 +97,27 @@ export async function onRequestPost(context) {
       `&Sec-MS-GEC=${secMsGec}` +
       `&Sec-MS-GEC-Version=${SEC_MS_GEC_VERSION}`;
 
-    // Connect via Cloudflare Workers WebSocket API
-    const wsResp = await fetch(wsUrl.replace("wss://", "https://"), {
-      headers: {
-        Upgrade: "websocket",
-        Pragma: "no-cache",
-        "Cache-Control": "no-cache",
-        Origin: "chrome-extension://jdiccldimpdaibmpdkjnbmckianbfold",
-        "User-Agent": `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${CHROMIUM_MAJOR_VERSION}.0.0.0 Safari/537.36 Edg/${CHROMIUM_MAJOR_VERSION}.0.0.0`,
-        "Accept-Encoding": "gzip, deflate, br, zstd",
-        "Accept-Language": "en-US,en;q=0.9",
-        Cookie: `muid=${muid};`,
-      },
-    });
+    // Connect via Cloudflare Workers WebSocket API (retry up to 3 times)
+    const wsHeaders = {
+      Upgrade: "websocket",
+      Pragma: "no-cache",
+      "Cache-Control": "no-cache",
+      Origin: "chrome-extension://jdiccldimpdaibmpdkjnbmckianbfold",
+      "User-Agent": `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${CHROMIUM_MAJOR_VERSION}.0.0.0 Safari/537.36 Edg/${CHROMIUM_MAJOR_VERSION}.0.0.0`,
+      "Accept-Encoding": "gzip, deflate, br, zstd",
+      "Accept-Language": "en-US,en;q=0.9",
+      Cookie: `muid=${muid};`,
+    };
 
-    const ws = wsResp.webSocket;
+    let ws = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (attempt > 0) await new Promise((r) => setTimeout(r, 300 * attempt));
+      const wsResp = await fetch(wsUrl.replace("wss://", "https://"), {
+        headers: wsHeaders,
+      });
+      ws = wsResp.webSocket;
+      if (ws) break;
+    }
     if (!ws) return errorJson("Failed to connect to TTS service", 502);
     ws.accept();
 

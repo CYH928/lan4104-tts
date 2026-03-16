@@ -52,6 +52,7 @@ const I18N = {
     footer: "Powered by Edge TTS \u00B7 Hosted on Cloudflare",
     errorEmpty: "Please enter some text",
     errorFailed: "Speech synthesis failed",
+    words: "words",
     langToggleLabel: "繁中",
   },
   "zh-Hant": {
@@ -68,6 +69,7 @@ const I18N = {
     footer: "由 Edge TTS 驅動 \u00B7 託管於 Cloudflare",
     errorEmpty: "請輸入文字",
     errorFailed: "語音合成失敗",
+    words: "字",
     langToggleLabel: "EN",
   },
 };
@@ -84,6 +86,7 @@ const rateEl = $("rate");
 const rateValueEl = $("rateValue");
 const rateResetBtn = $("rateReset");
 const charCountEl = $("charCount");
+const wordCountEl = $("wordCount");
 const playBtn = $("playBtn");
 const playIcon = $("playIcon");
 const loadingIcon = $("loadingIcon");
@@ -117,6 +120,7 @@ function applyI18n() {
   textEl.placeholder = t("placeholder");
   if (!playBtn.disabled) playText.textContent = t("play");
   $("shortcutHint").textContent = t("shortcut");
+  $("wordLabel").textContent = " " + t("words");
   $("footerInfo").textContent = t("footer");
   langToggle.textContent = t("langToggleLabel");
 }
@@ -175,10 +179,26 @@ rateResetBtn.addEventListener("click", () => {
   updateRangeProgress();
 });
 
-// ── Char count ──
+rateEl.addEventListener("dblclick", () => {
+  rateEl.value = 0;
+  rateValueEl.textContent = "1.0x";
+  updateRangeProgress();
+});
+
+// ── Word & char count ──
+function countWords(str) {
+  const trimmed = str.trim();
+  if (!trimmed) return 0;
+  // Count CJK characters individually + latin/other word runs
+  const cjk = trimmed.match(/[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff\u3040-\u309f\u30a0-\u30ff\uac00-\ud7af]/g);
+  const latin = trimmed.replace(/[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff\u3040-\u309f\u30a0-\u30ff\uac00-\ud7af]/g, " ").match(/\S+/g);
+  return (cjk ? cjk.length : 0) + (latin ? latin.length : 0);
+}
+
 function updateCharCount() {
   const len = textEl.value.length;
   charCountEl.textContent = len.toLocaleString();
+  wordCountEl.textContent = countWords(textEl.value).toLocaleString();
   if (len > MAX_CHARS * 0.9) {
     charCountEl.className = "text-red-500 font-medium";
   } else if (len > MAX_CHARS * 0.7) {
@@ -285,11 +305,17 @@ async function synthesize() {
   for (let i = 0; i < chunks.length; i++) {
     setLoading(true, i + 1, chunks.length);
 
-    const resp = await fetch("/api/tts", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: chunks[i], voice, rate: rateStr }),
-    });
+    const payload = JSON.stringify({ text: chunks[i], voice, rate: rateStr });
+    let resp;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      resp = await fetch("/api/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: payload,
+      });
+      if (resp.ok || resp.status < 500) break;
+      await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+    }
 
     if (!resp.ok) {
       let msg = t("errorFailed");
