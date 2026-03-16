@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Text to Speech</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔊</text></svg>">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            display: ['"DM Serif Display"', 'Georgia', 'serif'],
+            body: ['"DM Sans"', 'system-ui', '"Noto Sans TC"', '"Noto Sans SC"', 'sans-serif'],
+          },
+          colors: {
+            accent: { 50:'#effef7', 100:'#d9fbed', 200:'#b5f5d8', 300:'#7aebb8', 400:'#3dd991', 500:'#19c06f', 600:'#0d9e59', 700:'#0f7d49', 800:'#11633c', 900:'#105133', 950:'#032d1a' },
+            surface: { 50:'#fafaf9', 100:'#f5f5f4', 200:'#e7e5e4', 300:'#d6d3d1', 400:'#a8a29e', 500:'#78716c', 600:'#57534e', 700:'#44403c', 800:'#292524', 900:'#1c1917', 950:'#0c0a09' },
+          },
+        },
+      },
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Serif+Display&display=swap" rel="stylesheet">
+  <script>
+    (function(){
+      var t=localStorage.getItem('theme');
+      if(t==='dark'||(!t&&matchMedia('(prefers-color-scheme:dark)').matches))
+        document.documentElement.classList.add('dark');
+    })();
+  </script>
+  <style>
+    body { font-family: 'DM Sans', system-ui, sans-serif; }
+
+    /* Noise texture overlay */
+    .noise::before {
+      content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.3;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    }
+
+    /* Range slider */
+    input[type="range"] { -webkit-appearance: none; appearance: none; background: transparent; }
+    input[type="range"]::-webkit-slider-runnable-track {
+      height: 4px; border-radius: 999px;
+      background: linear-gradient(to right, #19c06f var(--range-progress, 0%), #e7e5e4 var(--range-progress, 0%));
+    }
+    .dark input[type="range"]::-webkit-slider-runnable-track {
+      background: linear-gradient(to right, #3dd991 var(--range-progress, 0%), #44403c var(--range-progress, 0%));
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%;
+      background: white; border: 2.5px solid #19c06f; margin-top: -7px;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.12); cursor: pointer;
+      transition: box-shadow 0.2s, transform 0.2s;
+    }
+    .dark input[type="range"]::-webkit-slider-thumb { border-color: #3dd991; background: #1c1917; }
+    input[type="range"]::-webkit-slider-thumb:hover {
+      box-shadow: 0 0 0 6px rgba(25,192,111,0.12); transform: scale(1.15);
+    }
+    input[type="range"]::-moz-range-track { height: 4px; border-radius: 999px; background: #e7e5e4; }
+    .dark input[type="range"]::-moz-range-track { background: #44403c; }
+    input[type="range"]::-moz-range-progress { height: 4px; border-radius: 999px; background: #19c06f; }
+    .dark input[type="range"]::-moz-range-progress { background: #3dd991; }
+    input[type="range"]::-moz-range-thumb {
+      width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid #19c06f;
+      background: white; box-shadow: 0 1px 6px rgba(0,0,0,0.12); cursor: pointer;
+    }
+    .dark input[type="range"]::-moz-range-thumb { border-color: #3dd991; background: #1c1917; }
+
+    /* Animations */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner { animation: spin 0.7s linear infinite; }
+    @keyframes fadeUp { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes slideIn { from { transform: translateY(-8px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes slideOut { from { opacity: 1; } to { opacity: 0; } }
+    .toast-in { animation: slideIn 0.25s ease-out; }
+    .toast-out { animation: slideOut 0.3s ease-in forwards; }
+    .reveal { animation: fadeUp 0.35s ease-out; }
+    .stagger-1 { animation: fadeUp 0.5s ease-out both 0.05s; }
+    .stagger-2 { animation: fadeUp 0.5s ease-out both 0.12s; }
+    .stagger-3 { animation: fadeUp 0.5s ease-out both 0.19s; }
+    .stagger-4 { animation: fadeUp 0.5s ease-out both 0.26s; }
+    .stagger-5 { animation: fadeUp 0.5s ease-out both 0.33s; }
+
+    /* Sound wave animation */
+    @keyframes wave { 0%,100% { height: 12px; } 50% { height: 28px; } }
+    .wave-bar { width: 3px; border-radius: 999px; background: currentColor; }
+    .wave-bar:nth-child(1) { animation: wave 1.2s ease-in-out infinite 0s; }
+    .wave-bar:nth-child(2) { animation: wave 1.2s ease-in-out infinite 0.15s; }
+    .wave-bar:nth-child(3) { animation: wave 1.2s ease-in-out infinite 0.3s; }
+    .wave-bar:nth-child(4) { animation: wave 1.2s ease-in-out infinite 0.45s; }
+    .wave-bar:nth-child(5) { animation: wave 1.2s ease-in-out infinite 0.6s; }
+
+    /* Select custom caret */
+    select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2378716c' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; }
+  </style>
+</head>
+<body class="noise min-h-screen bg-surface-50 dark:bg-surface-950 flex items-start justify-center px-4 py-8 sm:py-12 transition-colors duration-500">
+
+  <div class="relative z-10 w-full max-w-2xl lg:max-w-3xl">
+
+    <!-- Top Bar -->
+    <nav class="flex items-center justify-between mb-8 stagger-1">
+      <div class="flex items-center gap-2.5 text-accent-600 dark:text-accent-400">
+        <div class="flex items-end gap-[3px] h-7">
+          <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+        </div>
+        <span class="font-display text-lg tracking-tight text-surface-900 dark:text-surface-100">Text to Speech</span>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <button id="langToggle"
+          class="px-3 py-1.5 rounded-full text-[11px] font-semibold uppercase tracking-widest bg-surface-100 dark:bg-surface-800 text-surface-500 dark:text-surface-400 hover:text-surface-800 dark:hover:text-surface-200 border border-surface-200 dark:border-surface-700 hover:border-surface-300 dark:hover:border-surface-600 transition-all cursor-pointer">
+          繁中
+        </button>
+        <button id="themeToggle"
+          class="p-2 rounded-full bg-surface-100 dark:bg-surface-800 text-surface-500 dark:text-surface-400 hover:text-surface-800 dark:hover:text-surface-200 border border-surface-200 dark:border-surface-700 hover:border-surface-300 dark:hover:border-surface-600 transition-all cursor-pointer">
+          <svg id="iconSun" class="w-3.5 h-3.5 hidden dark:block" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"/></svg>
+          <svg id="iconMoon" class="w-3.5 h-3.5 block dark:hidden" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"/></svg>
+        </button>
+      </div>
+    </nav>
+
+    <!-- Header -->
+    <header class="mb-10 stagger-2">
+      <p id="subtitle" class="text-[13px] font-medium text-accent-600 dark:text-accent-400 tracking-wide uppercase mb-2">High-quality Text-to-Speech</p>
+      <h1 class="font-display text-4xl sm:text-5xl lg:text-6xl text-surface-900 dark:text-surface-50 leading-[1.1] tracking-tight">
+        Convert your words<br>
+        <span class="text-surface-400 dark:text-surface-500">into natural speech.</span>
+      </h1>
+    </header>
+
+    <!-- Main Card -->
+    <main class="bg-white dark:bg-surface-900 rounded-3xl shadow-2xl shadow-surface-900/[0.04] dark:shadow-black/30 border border-surface-200/80 dark:border-surface-800 p-5 sm:p-6 transition-colors duration-500 stagger-3">
+
+      <!-- Controls Row -->
+      <div class="grid grid-cols-3 gap-4 mb-6">
+        <div>
+          <label for="language" id="labelLang" class="block text-[11px] font-semibold text-surface-400 dark:text-surface-500 uppercase tracking-widest mb-2">Language</label>
+          <select id="language" class="w-full px-3 py-2.5 rounded-xl border border-surface-200 dark:border-surface-700 bg-surface-50 dark:bg-surface-800 text-[13px] text-surface-800 dark:text-surface-200 font-medium focus:outline-none focus:ring-2 focus:ring-accent-500/20 focus:border-accent-500 transition-all cursor-pointer appearance-none">
+            <option value="en-US" selected>English (US)</option>
+            <option value="en-GB">English (UK)</option>
+            <option value="zh-HK">廣東話</option>
+            <option value="zh-CN">普通話</option>
+            <option value="zh-TW">國語 (台灣)</option>
+            <option value="ja-JP">日本語</option>
+            <option value="ko-KR">한국어</option>
+          </select>
+        </div>
+        <div>
+          <label for="voice" id="labelVoice" class="block text-[11px] font-semibold text-surface-400 dark:text-surface-500 uppercase tracking-widest mb-2">Voice</label>
+          <select id="voice" class="w-full px-3 py-2.5 rounded-xl border border-surface-200 dark:border-surface-700 bg-surface-50 dark:bg-surface-800 text-[13px] text-surface-800 dark:text-surface-200 font-medium focus:outline-none focus:ring-2 focus:ring-accent-500/20 focus:border-accent-500 transition-all cursor-pointer appearance-none">
+          </select>
+        </div>
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <label id="labelSpeed" class="text-[11px] font-semibold text-surface-400 dark:text-surface-500 uppercase tracking-widest">Speed</label>
+            <button id="rateReset" title="Reset to 1.0x" class="text-[11px] font-mono font-bold text-accent-600 dark:text-accent-400 hover:text-accent-700 dark:hover:text-accent-300 transition-colors cursor-pointer">
+              <span id="rateValue">1.0x</span>
+            </button>
+          </div>
+          <div class="flex items-center h-[38px]">
+            <input type="range" id="rate" min="-50" max="200" value="0" step="10" class="w-full cursor-pointer">
+          </div>
+        </div>
+      </div>
+
+      <!-- Divider -->
+      <div class="border-t border-surface-100 dark:border-surface-800 mb-6"></div>
+
+      <!-- Text Input -->
+      <div class="mb-6">
+        <div class="flex items-center justify-between mb-2.5">
+          <label for="text" id="labelText" class="text-[11px] font-semibold text-surface-400 dark:text-surface-500 uppercase tracking-widest">Text</label>
+          <div class="flex items-center gap-0.5">
+            <button id="zoomOut" title="Zoom out"
+              class="w-7 h-7 flex items-center justify-center rounded-lg text-surface-400 dark:text-surface-500 hover:bg-surface-100 dark:hover:bg-surface-800 hover:text-surface-600 dark:hover:text-surface-300 transition-all cursor-pointer text-xs font-bold">A-</button>
+            <span id="zoomLevel" class="text-[10px] font-mono text-surface-400 dark:text-surface-600 w-9 text-center tabular-nums">14px</span>
+            <button id="zoomIn" title="Zoom in"
+              class="w-7 h-7 flex items-center justify-center rounded-lg text-surface-400 dark:text-surface-500 hover:bg-surface-100 dark:hover:bg-surface-800 hover:text-surface-600 dark:hover:text-surface-300 transition-all cursor-pointer text-xs font-bold">A+</button>
+          </div>
+        </div>
+        <textarea id="text" rows="8" maxlength="100000"
+          placeholder="Type or paste your text here..."
+          class="w-full px-5 py-4 rounded-2xl border border-surface-200 dark:border-surface-700 bg-surface-50/60 dark:bg-surface-800/60 text-[14px] text-surface-800 dark:text-surface-200 leading-relaxed resize-y min-h-[200px] lg:min-h-[280px] font-body
+                 placeholder:text-surface-300 dark:placeholder:text-surface-600 focus:outline-none focus:ring-2 focus:ring-accent-500/20 focus:border-accent-500 transition-all"></textarea>
+        <div class="flex justify-between items-center mt-2 px-1">
+          <span id="shortcutHint" class="text-[11px] text-surface-300 dark:text-surface-700 font-medium">Ctrl+Enter to play</span>
+          <span class="text-[11px] font-mono tabular-nums">
+            <span id="charCount" class="text-surface-400">0</span><span id="charMax" class="text-surface-300 dark:text-surface-700"> / 100,000</span>
+          </span>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex gap-3">
+        <button id="playBtn"
+          class="flex-1 flex items-center justify-center gap-2.5 py-3.5 px-6 rounded-2xl text-[14px] font-semibold text-white
+                 bg-accent-600 hover:bg-accent-700 dark:bg-accent-500 dark:hover:bg-accent-400 dark:text-surface-950
+                 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-accent-600 dark:disabled:hover:bg-accent-500
+                 transition-all duration-200 shadow-lg shadow-accent-600/20 dark:shadow-accent-500/10
+                 hover:shadow-xl hover:shadow-accent-600/25 hover:-translate-y-0.5
+                 active:translate-y-0 active:shadow-md">
+          <svg id="playIcon" class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z"/>
+          </svg>
+          <svg id="loadingIcon" class="w-4 h-4 spinner hidden" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+          </svg>
+          <span id="playText">Play</span>
+        </button>
+        <button id="downloadBtn"
+          class="flex items-center justify-center gap-2 py-3.5 px-6 rounded-2xl text-[14px] font-semibold
+                 text-surface-600 dark:text-surface-300 bg-surface-100 dark:bg-surface-800
+                 hover:bg-surface-200 dark:hover:bg-surface-700 border border-surface-200 dark:border-surface-700
+                 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-surface-100 dark:disabled:hover:bg-surface-800
+                 transition-all duration-200">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+          </svg>
+          <span>MP3</span>
+        </button>
+      </div>
+
+      <!-- Audio Player -->
+      <div id="playerWrap" class="hidden mt-5">
+        <div class="bg-surface-50 dark:bg-surface-800 rounded-2xl p-4 border border-surface-100 dark:border-surface-700 reveal">
+          <audio id="audio" controls class="w-full h-10"></audio>
+        </div>
+      </div>
+
+      <!-- Error Toast -->
+      <div id="error" class="hidden mt-5 px-4 py-3 rounded-2xl bg-red-50 dark:bg-red-500/10 border border-red-200/60 dark:border-red-500/20 text-red-600 dark:text-red-400 text-[13px] font-medium flex items-center gap-2.5">
+        <svg class="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+        </svg>
+        <span id="errorText"></span>
+      </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="mt-10 flex items-center justify-between text-[11px] text-surface-400 dark:text-surface-600 stagger-5">
+      <p id="footerInfo">Powered by Edge TTS &middot; Hosted on Cloudflare</p>
+      <p>Made by YKHN C.</p>
+    </footer>
+  </div>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>

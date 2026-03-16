@@ -1,0 +1,5 @@
+node_modules/
+.wrangler/
+test-output.mp3
+test-edge-tts.mjs
+.DS_Store
